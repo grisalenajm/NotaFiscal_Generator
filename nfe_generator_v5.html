@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NF-e Batch Generator v5</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+  :root {
+    --bg:#0d1117;--surface:#161b22;--surface2:#21262d;--border:#30363d;
+    --accent:#f0b429;--accent2:#e8680a;--green:#3fb950;--red:#f85149;
+    --blue:#58a6ff;--purple:#bc8cff;--text:#e6edf3;--muted:#8b949e;--radius:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;padding:24px;}
+
+  /* HEADER */
+  .header{display:flex;align-items:center;gap:12px;margin-bottom:26px;padding-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+  .logo{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;color:#000;flex-shrink:0;}
+  .header-text h1{font-size:19px;font-weight:800;}
+  .header-text p{color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace;}
+  .header-controls{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+
+  /* SWITCHERS */
+  .switcher{display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .sw-btn{padding:7px 14px;background:transparent;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap;}
+  .sw-btn.active{background:var(--accent);color:#000;}
+  .sw-btn:hover:not(.active){background:var(--surface2);color:var(--text);}
+  .lang-btn{padding:6px 11px;font-size:14px;}
+
+  /* GRID */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:820px){.grid{grid-template-columns:1fr;}}
+  .span2{grid-column:1/-1;}
+
+  /* CARD */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+  .card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+  .dot{width:3px;height:12px;border-radius:2px;display:inline-block;flex-shrink:0;}
+  .dot-yellow{background:var(--accent);}.dot-blue{background:var(--blue);}.dot-green{background:var(--green);}.dot-purple{background:var(--purple);}
+
+  /* INPUTS */
+  label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;font-family:'JetBrains Mono',monospace;}
+  input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:7px 10px;outline:none;transition:border-color .2s;margin-bottom:9px;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+  input.modified{border-color:var(--purple);}
+  textarea{resize:vertical;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+
+  /* DROP ZONE */
+  .drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:18px;text-align:center;cursor:pointer;transition:all .2s;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:11px;}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);color:var(--accent);background:rgba(240,180,41,.03);}
+  .drop-zone.loaded{border-color:var(--green);color:var(--green);}
+
+  /* FIXED PANEL */
+  .fixed-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .chip{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;}
+  .chip-fixed{background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.3);}
+  .empty-hint{color:var(--muted);font-size:12px;font-style:italic;text-align:center;padding:18px 0;font-family:'JetBrains Mono',monospace;}
+
+  /* CSV */
+  #csvTextarea{font-size:11px;min-height:110px;line-height:1.7;}
+  .csv-header-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;}
+
+  /* BUTTONS */
+  .btn-small{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 9px;border-radius:5px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .btn-small:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-group{display:flex;gap:9px;}
+  .btn{flex:1;padding:11px 16px;border-radius:var(--radius);border:none;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;}
+  .btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px);}
+  .btn-secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
+  .btn-secondary:hover{border-color:var(--accent);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;filter:none!important;}
+
+  /* STATS */
+  .stats-bar{display:none;flex-wrap:wrap;gap:18px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+  .stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'JetBrains Mono',monospace;}
+  .stat-value{font-size:18px;font-weight:800;}
+
+  /* MODE INDICATOR */
+  .mode-indicator{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:var(--radius);font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;border:1px solid;margin-top:4px;}
+  .mode-receptor{background:rgba(88,166,255,.08);border-color:rgba(88,166,255,.3);color:var(--blue);}
+  .mode-emisor{background:rgba(240,180,41,.08);border-color:rgba(240,180,41,.3);color:var(--accent);}
+
+  /* LOG */
+  .log-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.9;min-height:80px;max-height:200px;overflow-y:auto;}
+  .log-ok{color:var(--green);}.log-err{color:var(--red);}.log-info{color:var(--blue);}.log-warn{color:var(--accent);}.log-muted{color:var(--muted);}
+
+  /* RESULTS */
+  .result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:10px;}
+  .result-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px;transition:border-color .2s;}
+  .result-item:hover{border-color:var(--accent);}
+  .nf-num{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--accent);}
+  .nf-sub{font-size:11px;font-family:'JetBrains Mono',monospace;}
+  .nf-info{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;line-height:1.7;}
+  .nf-status{font-size:11px;font-weight:700;}
+  .status-ok{color:var(--green);}.status-err{color:var(--red);}
+  .btn-dl{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:5px;font-size:11px;font-family:'JetBrains Mono',monospace;cursor:pointer;text-align:center;transition:all .15s;}
+  .btn-dl:hover{background:var(--accent);color:#000;border-color:var(--accent);}
+
+  .divider{border:none;border-top:1px solid var(--border);}
+  ::-webkit-scrollbar{width:5px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+  /* GUIDE MODAL */
+  .guide-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;backdrop-filter:blur(4px);}
+  .guide-overlay.open{display:flex;align-items:center;justify-content:center;}
+  .guide-modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:min(780px,95vw);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+  .guide-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);}
+  .guide-header h2{font-size:17px;font-weight:800;}
+  .guide-close{background:var(--surface2);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+  .guide-close:hover{border-color:var(--red);color:var(--red);}
+  .guide-body{overflow-y:auto;padding:24px;line-height:1.7;}
+  .guide-body h3{font-size:14px;font-weight:800;color:var(--accent);margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border);}
+  .guide-body h3:first-child{margin-top:0;}
+  .guide-body p{font-size:13px;color:var(--text);margin-bottom:10px;}
+  .guide-body ul{padding-left:20px;margin-bottom:10px;}
+  .guide-body li{font-size:13px;color:var(--text);margin-bottom:5px;}
+  .guide-body code{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--blue);}
+  .guide-body .step{display:flex;gap:12px;margin-bottom:14px;align-items:flex-start;}
+  .guide-body .step-num{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#000;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+  .guide-body .step-text{font-size:13px;}
+  .guide-body .step-text b{color:var(--text);}
+  .guide-body .note{background:rgba(240,180,41,.08);border:1px solid rgba(240,180,41,.25);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--accent);margin-bottom:12px;}
+  .guide-body table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px;}
+  .guide-body th{background:var(--surface2);color:var(--muted);padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;}
+  .guide-body td{padding:5px 10px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;}
+  .guide-body td:first-child{color:var(--accent);}
+  .guide-body tr:last-child td{border-bottom:none;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">NF</div>
+  <div class="header-text">
+    <h1>NF-e Batch Generator <span style="color:var(--accent)">v5</span></h1>
+    <p>SEFAZ v4.00 · <span data-i18n="subtitle"></span></p>
+  </div>
+  <div class="header-controls">
+    <div class="switcher">
+      <button class="sw-btn lang-btn active" onclick="setLang('es')" title="Español">🇪🇸</button>
+      <button class="sw-btn lang-btn"        onclick="setLang('en')" title="English">🇬🇧</button>
+      <button class="sw-btn lang-btn"        onclick="setLang('pt')" title="Português">🇧🇷</button>
+    </div>
+    <div class="switcher">
+      <button class="sw-btn active" id="btnModeReceptor" onclick="setMode('receptor')" data-i18n="modeReceptorBtn"></button>
+      <button class="sw-btn"        id="btnModeEmisor"   onclick="setMode('emisor')"   data-i18n="modeEmisorBtn"></button>
+    </div>
+    <button class="btn-small" onclick="openGuide()" data-i18n="btnGuide" style="padding:7px 14px;font-family:'Syne',sans-serif;font-weight:700;"></button>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <div class="card-title"><span class="dot dot-yellow"></span><span data-i18n="cardTemplate"></span></div>
+    <div class="drop-zone" id="dropZone">
+      <div id="dropText"><span data-i18n="dropHint"></span><br><span style="color:var(--muted);font-size:11px" data-i18n="dropSub"></span></div>
+    </div>
+    <input type="file" id="xmlFileInput" accept=".xml" style="display:none">
+    <div class="field-row">
+      <div><label data-i18n="lblPicms"></label><input type="number" id="pICMS" value="18.00" step="0.01"></div>
+      <div><label>tpAmb</label>
+        <select id="tpAmb">
+          <option value="1" data-i18n="tpAmb1"></option>
+          <option value="2" selected data-i18n="tpAmb2"></option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div><label>nProt base</label><input type="text" id="nProtBase" data-i18n-placeholder="placeholderNprot"></div>
+      <div><label data-i18n="lblDhEmi"></label><input type="text" id="dhEmiOverride" data-i18n-placeholder="placeholderDhEmi"></div>
+    </div>
+    <div class="mode-indicator mode-receptor" id="modeIndicator"><span id="modeIndicatorText"></span></div>
+  </div>
+
+  <div class="card">
+    <div class="fixed-panel-header">
+      <div class="card-title" style="margin-bottom:0">
+        <span class="dot dot-blue"></span>
+        <span id="fixedPanelTitle"></span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="chip chip-fixed" data-i18n="chipFixed"></span>
+        <button class="btn-small" onclick="resetFixedFromTemplate()" data-i18n="btnReset"></button>
+      </div>
+    </div>
+    <div id="fixedFields"><div class="empty-hint" data-i18n="fixedEmpty"></div></div>
+  </div>
+
+  <div class="card span2">
+    <div class="csv-header-row">
+      <div class="card-title" style="margin-bottom:0">
+        <span class="dot dot-yellow"></span>CSV — <span id="csvVarLabel"></span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn-small" onclick="triggerCsvUpload()" data-i18n="btnUploadCsv"></button>
+        <button class="btn-small" onclick="insertExample()" data-i18n="btnExample"></button>
+        <button class="btn-small" onclick="copyCsvHeader()" data-i18n="btnCopyHeader"></button>
+        <button class="btn-small" onclick="document.getElementById('csvTextarea').value=''" data-i18n="btnClear"></button>
+        <button class="btn-small" onclick="previewCsv()" data-i18n="btnPreview"></button>
+      </div>
+    </div>
+    <input type="file" id="csvFileInput" accept=".csv,.txt" style="display:none">
+    <div id="csvFilenameRow" style="margin:7px 0 4px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green)"></div>
+    <textarea id="csvTextarea" spellcheck="false"></textarea>
+    <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace" id="csvColHint"></div>
+  </div>
+
+  <div class="span2 btn-group">
+    <button class="btn btn-primary"   onclick="generateBatch()" data-i18n="btnGenerate"></button>
+    <button class="btn btn-secondary" id="btnZip" onclick="downloadAll()" disabled data-i18n="btnZip"></button>
+    <button class="btn btn-secondary" onclick="clearAll()" data-i18n="btnClearAll"></button>
+  </div>
+
+  <div class="stats-bar span2" id="statsBar">
+    <div><div class="stat-label" data-i18n="statTotal"></div><div class="stat-value" style="color:var(--accent)" id="sTotal">0</div></div>
+    <div><div class="stat-label">OK</div><div class="stat-value" style="color:var(--green)" id="sOk">0</div></div>
+    <div><div class="stat-label" data-i18n="statErrors"></div><div class="stat-value" style="color:var(--red)" id="sErr">0</div></div>
+    <div><div class="stat-label" data-i18n="statVnf"></div><div class="stat-value" style="color:var(--blue)" id="sVnf">R$ 0,00</div></div>
+    <div><div class="stat-label" data-i18n="statIcms"></div><div class="stat-value" style="color:var(--purple)" id="sIcms">R$ 0,00</div></div>
+  </div>
+
+  <hr class="divider span2">
+
+  <div class="card">
+    <div class="card-title"><span class="dot dot-green"></span>Log</div>
+    <div class="log-box" id="logBox"><span class="log-muted" data-i18n="logWaiting"></span></div>
+  </div>
+
+  <div class="card" id="resultArea" style="display:none">
+    <div class="card-title"><span class="dot dot-yellow"></span><span data-i18n="cardResults"></span></div>
+    <div class="result-grid" id="resultGrid"></div>
+  </div>
+</div>
+
+<!-- GUIDE MODAL -->
+<div class="guide-overlay" id="guideOverlay" onclick="if(event.target===this)closeGuide()">
+  <div class="guide-modal">
+    <div class="guide-header">
+      <h2 id="guideTitle"></h2>
+      <button class="guide-close" onclick="closeGuide()">✕</button>
+    </div>
+    <div class="guide-body" id="guideBody"></div>
+  </div>
+</div>
+
+<script>
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+const LANGS = {
+  es: {
+    subtitle:'Modo receptor/emisor · Datos editables · Upload CSV',
+    modeReceptorBtn:'📥 Receptor',modeEmisorBtn:'📤 Emisor',
+    cardTemplate:'Plantilla XML de referencia',
+    dropHint:'📂 Arrastra un XML de NF-e aquí',dropSub:'Los datos fijos se extraen automáticamente',
+    lblPicms:'pICMS default (%)',tpAmb1:'1 – Produção',tpAmb2:'2 – Homologação',
+    lblDhEmi:'dhEmi override (AAAA-MM-DD)',
+    placeholderNprot:'Auto desde plantilla',placeholderDhEmi:'Vacío = de plantilla',
+    modeIndReceptor:'📥 Modo Receptor — dest fijo, emit variable por CSV',
+    modeIndEmisor:'📤 Modo Emisor — emit fijo, dest variable por CSV',
+    fixedTitleReceptor:'Destinatario (tú)',fixedTitleEmisor:'Emisor (tú)',
+    chipFixed:'FIJO — editable',btnReset:'↺ Reset',
+    fixedEmpty:'Carga una plantilla XML para rellenar estos campos',
+    csvVarReceptor:'datos de emisores',csvVarEmisor:'datos de destinatarios',
+    btnUploadCsv:'📂 Subir CSV',btnExample:'Ejemplo',btnCopyHeader:'Copiar cabecera',
+    btnClear:'Limpiar',btnPreview:'Previsualizar',
+    csvPlaceholder:'Sube un CSV o pega los datos aquí...',
+    btnGenerate:'⚡ Generar XML',btnZip:'📦 Descargar ZIP',btnClearAll:'🗑 Limpiar',
+    btnGuide:'❓ Ayuda',
+    statTotal:'Total',statErrors:'Errores',statVnf:'vNF Total',statIcms:'ICMS Total',
+    logWaiting:'Aguardando...',cardResults:'XMLs generados',
+    logLoaded:(f,kb,d)=>`Plantilla cargada: ${f} · dhEmi: ${d}`,
+    logExtracted:(e,d)=>`Datos extraídos — emit: ${e} | dest: ${d}`,
+    logModeChanged:m=>`Modo: ${m}`,logCsvLoaded:(f,kb)=>`CSV cargado: ${f} (${kb} KB)`,
+    logHeaderCopied:'Cabecera copiada',logReset:'Campos restaurados desde plantilla',
+    logBatchStart:(n,a,i)=>`─── Lote: ${n} NF-e · tpAmb=${a} · ICMS=${i}% ───`,
+    logBatchEnd:(ok,err,v,i)=>`─── Fin: ${ok} OK · ${err} errores · vNF R$${v} · ICMS R$${i} ───`,
+    logNfOk:(nf,n,v,i,p)=>`✅ NF ${nf} | ${n} | vNF R$${v} | ICMS R$${i} | IPI R$${p}`,
+    logNfErr:(nf,m)=>`❌ NF ${nf}: ${m}`,
+    logZip:'ZIP descargado',logZipFallback:'JSZip no disponible — descarga individual',
+    logCleared:'Limpiado.',logPreview:n=>`Preview: ${n} fila(s)`,
+    errNoTemplate:'ERROR: carga una plantilla XML primero',errNoCsv:'ERROR: CSV vacío',
+    errNoRows:'ERROR: sin filas de datos',errNnf:'nNF vacío',
+    errCnpjEmit:c=>`CNPJ_emit inválido: "${c}"`,errCnpjEmitFixed:c=>`CNPJ emit fijo inválido: "${c}"`,
+    errVnf:v=>`vNF inválido: ${v}`,errChave:l=>`Chave43 length=${l}`,
+    cardFixed:{CNPJ:'CNPJ',xNome:'Razão Social',IE:'IE',email:'E-mail',CRT:'CRT',xLgr:'Logradouro',nro:'Número',xBairro:'Bairro',xMun:'Município',UF:'UF',CEP:'CEP'},
+    resultGenerated:'✅ Generado',resultError:'❌ Error',btnDownload:'⬇ Descargar XML',
+    guideTitle:'Guía de usuario — NF-e Batch Generator v5',
+    guide:`
+      <h3>¿Qué hace esta herramienta?</h3>
+      <p>Genera ficheros XML de Nota Fiscal Eletrônica (NF-e) brasileña v4.00 en lote, a partir de una plantilla XML real y un CSV con los datos variables. Funciona completamente en el navegador, sin servidor.</p>
+      <div class="note">⚠️ Los XML generados tienen firma digital inválida (la de la plantilla original). Son válidos para pruebas internas, no para envío a SEFAZ en producción.</div>
+
+      <h3>Modos de operación</h3>
+      <p><b>📥 Receptor</b> — Eres el destinatario (<code>dest</code>) de las notas. Tus datos son fijos y se extraen de la plantilla. Los datos del emisor (proveedor) varían por fila en el CSV.</p>
+      <p><b>📤 Emisor</b> — Eres el emitente (<code>emit</code>) de las notas. Tus datos son fijos. Los datos del destinatario (cliente) varían por fila en el CSV.</p>
+
+      <h3>Paso a paso</h3>
+      <div class="step"><div class="step-num">1</div><div class="step-text"><b>Elige el modo</b> (Receptor o Emisor) con el selector del header.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text"><b>Carga la plantilla XML</b>: arrastra un fichero NF-e real o haz clic en la zona punteada. Se extraen automáticamente tus datos fijos (emit o dest según el modo).</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text"><b>Verifica y edita</b> tus datos fijos en el panel derecho. Si modificas algún campo se marca en morado. Usa ↺ Reset para restaurar los valores originales.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text"><b>Prepara el CSV</b> con los datos variables. Usa "📂 Subir CSV" o pega directamente. Pulsa "Ejemplo" para ver el formato.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text"><b>Configura</b> pICMS default, tpAmb y (opcionalmente) nProt base y dhEmi override.</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-text"><b>Genera</b> pulsando ⚡ Generar XML. Descarga cada fichero individualmente o todos juntos en ZIP.</div></div>
+
+      <h3>Columnas CSV — Modo Receptor</h3>
+      <table>
+        <tr><th>Columna</th><th>Descripción</th><th>Ejemplo</th></tr>
+        <tr><td>nNF</td><td>Número de la nota</td><td>77012</td></tr>
+        <tr><td>xPed</td><td>Número de pedido</td><td>7100008812</td></tr>
+        <tr><td>CNPJ_emit</td><td>CNPJ del emisor (14 dígitos)</td><td>02668458000149</td></tr>
+        <tr><td>xNome_emit</td><td>Razão Social del emisor</td><td>DOMICILI IND E COM</td></tr>
+        <tr><td>IE_emit</td><td>Inscrição Estadual</td><td>336695410116</td></tr>
+        <tr><td>CRT</td><td>Régimen tributario (1=Simples, 3=Lucro)</td><td>1</td></tr>
+        <tr><td>xLgr_emit</td><td>Calle</td><td>RUA JOSE CAMPANELLA</td></tr>
+        <tr><td>nro_emit</td><td>Número</td><td>380</td></tr>
+        <tr><td>xBairro_emit</td><td>Barrio</td><td>MACEDO</td></tr>
+        <tr><td>xMun_emit</td><td>Municipio</td><td>GUARULHOS</td></tr>
+        <tr><td>UF_emit</td><td>Estado</td><td>SP</td></tr>
+        <tr><td>CEP_emit</td><td>CEP (8 dígitos)</td><td>07112100</td></tr>
+        <tr><td>qCom</td><td>Cantidad (4 decimales)</td><td>3.0000</td></tr>
+        <tr><td>uCom</td><td>Unidad</td><td>UN</td></tr>
+        <tr><td>vUnCom</td><td>Precio unitario</td><td>450.00</td></tr>
+        <tr><td>vProd</td><td>Total ítem (qCom × vUnCom)</td><td>1350.00</td></tr>
+        <tr><td>vNF</td><td>Total nota</td><td>1646.34</td></tr>
+        <tr><td>xProd</td><td>Descripción producto</td><td>FPO-16.1 BR</td></tr>
+        <tr><td>NCM</td><td>Código NCM</td><td>73182200</td></tr>
+        <tr><td>CST_IPI</td><td>00=tributado, 70=exento</td><td>70</td></tr>
+        <tr><td>pIPI</td><td>Alícuota IPI %</td><td>0.00</td></tr>
+        <tr><td>pICMS_row</td><td>% ICMS (vacío = default global)</td><td>18.00</td></tr>
+      </table>
+      <p>En <b>Modo Emisor</b> las columnas del emisor se reemplazan por las del destinatario: <code>CNPJ_dest</code>, <code>xNome_dest</code>, <code>IE_dest</code>, <code>xLgr_dest</code>, <code>nro_dest</code>, <code>xBairro_dest</code>, <code>xMun_dest</code>, <code>UF_dest</code>, <code>CEP_dest</code>.</p>
+
+      <h3>Errores frecuentes</h3>
+      <ul>
+        <li><b>CNPJ inválido</b>: debe tener exactamente 14 dígitos numéricos, sin puntos ni guiones.</li>
+        <li><b>CEP inválido</b>: 8 dígitos, sin guión. Ej: <code>07112100</code></li>
+        <li><b>vNF inválido</b>: usa punto como separador decimal, no coma.</li>
+        <li><b>vUnCom ≠ vProd/qCom</b>: verifica que precio unitario × cantidad = total ítem.</li>
+      </ul>
+    `
+  },
+  en: {
+    subtitle:'Recipient/Issuer mode · Editable fields · CSV upload',
+    modeReceptorBtn:'📥 Recipient',modeEmisorBtn:'📤 Issuer',
+    cardTemplate:'Reference XML Template',
+    dropHint:'📂 Drag an NF-e XML here',dropSub:'Fixed data is extracted automatically',
+    lblPicms:'Default pICMS (%)',tpAmb1:'1 – Production',tpAmb2:'2 – Homologation',
+    lblDhEmi:'dhEmi override (YYYY-MM-DD)',
+    placeholderNprot:'Auto from template',placeholderDhEmi:'Empty = from template',
+    modeIndReceptor:'📥 Recipient mode — fixed dest, variable emit from CSV',
+    modeIndEmisor:'📤 Issuer mode — fixed emit, variable dest from CSV',
+    fixedTitleReceptor:'Recipient (you)',fixedTitleEmisor:'Issuer (you)',
+    chipFixed:'FIXED — editable',btnReset:'↺ Reset',
+    fixedEmpty:'Load an XML template to populate these fields',
+    csvVarReceptor:'issuer data',csvVarEmisor:'recipient data',
+    btnUploadCsv:'📂 Upload CSV',btnExample:'Example',btnCopyHeader:'Copy header',
+    btnClear:'Clear',btnPreview:'Preview',
+    csvPlaceholder:'Upload a CSV or paste data here...',
+    btnGenerate:'⚡ Generate XML',btnZip:'📦 Download ZIP',btnClearAll:'🗑 Clear all',
+    btnGuide:'❓ Help',
+    statTotal:'Total',statErrors:'Errors',statVnf:'vNF Total',statIcms:'ICMS Total',
+    logWaiting:'Waiting...',cardResults:'Generated XMLs',
+    logLoaded:(f,kb,d)=>`Template loaded: ${f} · dhEmi: ${d}`,
+    logExtracted:(e,d)=>`Data extracted — emit: ${e} | dest: ${d}`,
+    logModeChanged:m=>`Mode: ${m}`,logCsvLoaded:(f,kb)=>`CSV loaded: ${f} (${kb} KB)`,
+    logHeaderCopied:'Header copied',logReset:'Fields restored from template',
+    logBatchStart:(n,a,i)=>`─── Batch: ${n} NF-e · tpAmb=${a} · ICMS=${i}% ───`,
+    logBatchEnd:(ok,err,v,i)=>`─── Done: ${ok} OK · ${err} errors · vNF R$${v} · ICMS R$${i} ───`,
+    logNfOk:(nf,n,v,i,p)=>`✅ NF ${nf} | ${n} | vNF R$${v} | ICMS R$${i} | IPI R$${p}`,
+    logNfErr:(nf,m)=>`❌ NF ${nf}: ${m}`,
+    logZip:'ZIP downloaded',logZipFallback:'JSZip not available — individual download',
+    logCleared:'Cleared.',logPreview:n=>`Preview: ${n} row(s)`,
+    errNoTemplate:'ERROR: load an XML template first',errNoCsv:'ERROR: CSV is empty',
+    errNoRows:'ERROR: no data rows found',errNnf:'nNF is empty',
+    errCnpjEmit:c=>`Invalid CNPJ_emit: "${c}"`,errCnpjEmitFixed:c=>`Invalid fixed emit CNPJ: "${c}"`,
+    errVnf:v=>`Invalid vNF: ${v}`,errChave:l=>`Chave43 length=${l}`,
+    cardFixed:{CNPJ:'CNPJ',xNome:'Company name',IE:'State Tax ID',email:'E-mail',CRT:'CRT',xLgr:'Street',nro:'Number',xBairro:'District',xMun:'City',UF:'State',CEP:'ZIP'},
+    resultGenerated:'✅ Generated',resultError:'❌ Error',btnDownload:'⬇ Download XML',
+    guideTitle:'User Guide — NF-e Batch Generator v5',
+    guide:`
+      <h3>What does this tool do?</h3>
+      <p>Generates Brazilian NF-e XML files (v4.00) in batch, from a real XML template and a CSV with variable data. Runs entirely in the browser — no server required.</p>
+      <div class="note">⚠️ Generated XMLs have an invalid digital signature (from the original template). They are valid for internal testing only, not for submission to SEFAZ in production.</div>
+
+      <h3>Operation modes</h3>
+      <p><b>📥 Recipient</b> — You are the recipient (<code>dest</code>) of the invoices. Your data is fixed and extracted from the template. The issuer (supplier) data varies per CSV row.</p>
+      <p><b>📤 Issuer</b> — You are the issuer (<code>emit</code>) of the invoices. Your data is fixed. The recipient (customer) data varies per CSV row.</p>
+
+      <h3>Step by step</h3>
+      <div class="step"><div class="step-num">1</div><div class="step-text"><b>Choose the mode</b> (Recipient or Issuer) using the header selector.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text"><b>Load the XML template</b>: drag a real NF-e file or click the dotted area. Your fixed data is extracted automatically.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text"><b>Review and edit</b> your fixed data in the right panel. Modified fields are highlighted in purple. Use ↺ Reset to restore original values.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text"><b>Prepare the CSV</b> with variable data. Use "📂 Upload CSV" or paste directly. Click "Example" to see the format.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text"><b>Configure</b> default pICMS, tpAmb, and optionally nProt base and dhEmi override.</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-text"><b>Generate</b> by clicking ⚡ Generate XML. Download files individually or all together as a ZIP.</div></div>
+
+      <h3>CSV columns — Recipient mode</h3>
+      <table>
+        <tr><th>Column</th><th>Description</th><th>Example</th></tr>
+        <tr><td>nNF</td><td>Invoice number</td><td>77012</td></tr>
+        <tr><td>xPed</td><td>Purchase order number</td><td>7100008812</td></tr>
+        <tr><td>CNPJ_emit</td><td>Issuer CNPJ (14 digits)</td><td>02668458000149</td></tr>
+        <tr><td>xNome_emit</td><td>Issuer company name</td><td>DOMICILI IND E COM</td></tr>
+        <tr><td>IE_emit</td><td>State Tax ID</td><td>336695410116</td></tr>
+        <tr><td>CRT</td><td>Tax regime (1=Simples, 3=Lucro)</td><td>1</td></tr>
+        <tr><td>xLgr_emit</td><td>Street name</td><td>RUA JOSE CAMPANELLA</td></tr>
+        <tr><td>nro_emit</td><td>Street number</td><td>380</td></tr>
+        <tr><td>xBairro_emit</td><td>District</td><td>MACEDO</td></tr>
+        <tr><td>xMun_emit</td><td>City</td><td>GUARULHOS</td></tr>
+        <tr><td>UF_emit</td><td>State code</td><td>SP</td></tr>
+        <tr><td>CEP_emit</td><td>ZIP code (8 digits)</td><td>07112100</td></tr>
+        <tr><td>qCom</td><td>Quantity (4 decimals)</td><td>3.0000</td></tr>
+        <tr><td>uCom</td><td>Unit of measure</td><td>UN</td></tr>
+        <tr><td>vUnCom</td><td>Unit price</td><td>450.00</td></tr>
+        <tr><td>vProd</td><td>Item total (qCom × vUnCom)</td><td>1350.00</td></tr>
+        <tr><td>vNF</td><td>Invoice total</td><td>1646.34</td></tr>
+        <tr><td>xProd</td><td>Product description</td><td>FPO-16.1 BR</td></tr>
+        <tr><td>NCM</td><td>NCM code</td><td>73182200</td></tr>
+        <tr><td>CST_IPI</td><td>00=taxed, 70=exempt</td><td>70</td></tr>
+        <tr><td>pIPI</td><td>IPI rate %</td><td>0.00</td></tr>
+        <tr><td>pICMS_row</td><td>ICMS % (empty = global default)</td><td>18.00</td></tr>
+      </table>
+      <p>In <b>Issuer mode</b>, issuer columns are replaced by recipient columns: <code>CNPJ_dest</code>, <code>xNome_dest</code>, <code>IE_dest</code>, <code>xLgr_dest</code>, <code>nro_dest</code>, <code>xBairro_dest</code>, <code>xMun_dest</code>, <code>UF_dest</code>, <code>CEP_dest</code>.</p>
+
+      <h3>Common errors</h3>
+      <ul>
+        <li><b>Invalid CNPJ</b>: must be exactly 14 numeric digits, no dots or dashes.</li>
+        <li><b>Invalid CEP</b>: 8 digits, no dash. E.g.: <code>07112100</code></li>
+        <li><b>Invalid vNF</b>: use a dot as decimal separator, not a comma.</li>
+        <li><b>vUnCom ≠ vProd/qCom</b>: verify unit price × quantity = item total.</li>
+      </ul>
+    `
+  },
+  pt: {
+    subtitle:'Modo receptor/emissor · Dados editáveis · Upload CSV',
+    modeReceptorBtn:'📥 Receptor',modeEmisorBtn:'📤 Emissor',
+    cardTemplate:'Modelo XML de referência',
+    dropHint:'📂 Arraste um XML de NF-e aqui',dropSub:'Os dados fixos são extraídos automaticamente',
+    lblPicms:'pICMS padrão (%)',tpAmb1:'1 – Produção',tpAmb2:'2 – Homologação',
+    lblDhEmi:'dhEmi override (AAAA-MM-DD)',
+    placeholderNprot:'Auto do modelo',placeholderDhEmi:'Vazio = do modelo',
+    modeIndReceptor:'📥 Modo Receptor — dest fixo, emit variável por CSV',
+    modeIndEmisor:'📤 Modo Emissor — emit fixo, dest variável por CSV',
+    fixedTitleReceptor:'Destinatário (você)',fixedTitleEmisor:'Emitente (você)',
+    chipFixed:'FIXO — editável',btnReset:'↺ Restaurar',
+    fixedEmpty:'Carregue um modelo XML para preencher esses campos',
+    csvVarReceptor:'dados dos emitentes',csvVarEmisor:'dados dos destinatários',
+    btnUploadCsv:'📂 Carregar CSV',btnExample:'Exemplo',btnCopyHeader:'Copiar cabeçalho',
+    btnClear:'Limpar',btnPreview:'Visualizar',
+    csvPlaceholder:'Carregue um CSV ou cole os dados aqui...',
+    btnGenerate:'⚡ Gerar XML',btnZip:'📦 Baixar ZIP',btnClearAll:'🗑 Limpar tudo',
+    btnGuide:'❓ Ajuda',
+    statTotal:'Total',statErrors:'Erros',statVnf:'vNF Total',statIcms:'ICMS Total',
+    logWaiting:'Aguardando...',cardResults:'XMLs gerados',
+    logLoaded:(f,kb,d)=>`Modelo carregado: ${f} · dhEmi: ${d}`,
+    logExtracted:(e,d)=>`Dados extraídos — emit: ${e} | dest: ${d}`,
+    logModeChanged:m=>`Modo: ${m}`,logCsvLoaded:(f,kb)=>`CSV carregado: ${f} (${kb} KB)`,
+    logHeaderCopied:'Cabeçalho copiado',logReset:'Campos restaurados do modelo',
+    logBatchStart:(n,a,i)=>`─── Lote: ${n} NF-e · tpAmb=${a} · ICMS=${i}% ───`,
+    logBatchEnd:(ok,err,v,i)=>`─── Fim: ${ok} OK · ${err} erros · vNF R$${v} · ICMS R$${i} ───`,
+    logNfOk:(nf,n,v,i,p)=>`✅ NF ${nf} | ${n} | vNF R$${v} | ICMS R$${i} | IPI R$${p}`,
+    logNfErr:(nf,m)=>`❌ NF ${nf}: ${m}`,
+    logZip:'ZIP baixado',logZipFallback:'JSZip não disponível — download individual',
+    logCleared:'Limpo.',logPreview:n=>`Visualização: ${n} linha(s)`,
+    errNoTemplate:'ERRO: carregue um modelo XML primeiro',errNoCsv:'ERRO: CSV vazio',
+    errNoRows:'ERRO: sem linhas de dados',errNnf:'nNF vazio',
+    errCnpjEmit:c=>`CNPJ_emit inválido: "${c}"`,errCnpjEmitFixed:c=>`CNPJ emitente fixo inválido: "${c}"`,
+    errVnf:v=>`vNF inválido: ${v}`,errChave:l=>`Chave43 length=${l}`,
+    cardFixed:{CNPJ:'CNPJ',xNome:'Razão Social',IE:'Inscrição Estadual',email:'E-mail',CRT:'CRT',xLgr:'Logradouro',nro:'Número',xBairro:'Bairro',xMun:'Município',UF:'UF',CEP:'CEP'},
+    resultGenerated:'✅ Gerado',resultError:'❌ Erro',btnDownload:'⬇ Baixar XML',
+    guideTitle:'Guia do Usuário — NF-e Batch Generator v5',
+    guide:`
+      <h3>O que esta ferramenta faz?</h3>
+      <p>Gera arquivos XML de Nota Fiscal Eletrônica (NF-e) brasileira v4.00 em lote, a partir de um modelo XML real e um CSV com os dados variáveis. Funciona completamente no navegador, sem servidor.</p>
+      <div class="note">⚠️ Os XMLs gerados possuem assinatura digital inválida (a do modelo original). São válidos para testes internos, não para envio à SEFAZ em produção.</div>
+
+      <h3>Modos de operação</h3>
+      <p><b>📥 Receptor</b> — Você é o destinatário (<code>dest</code>) das notas. Seus dados são fixos e extraídos do modelo. Os dados do emitente (fornecedor) variam por linha no CSV.</p>
+      <p><b>📤 Emissor</b> — Você é o emitente (<code>emit</code>) das notas. Seus dados são fixos. Os dados do destinatário (cliente) variam por linha no CSV.</p>
+
+      <h3>Passo a passo</h3>
+      <div class="step"><div class="step-num">1</div><div class="step-text"><b>Escolha o modo</b> (Receptor ou Emissor) com o seletor no cabeçalho.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text"><b>Carregue o modelo XML</b>: arraste um arquivo NF-e real ou clique na área pontilhada. Seus dados fixos são extraídos automaticamente.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text"><b>Verifique e edite</b> seus dados fixos no painel direito. Campos modificados ficam marcados em roxo. Use ↺ Restaurar para voltar aos valores originais.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text"><b>Prepare o CSV</b> com os dados variáveis. Use "📂 Carregar CSV" ou cole diretamente. Clique em "Exemplo" para ver o formato.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text"><b>Configure</b> pICMS padrão, tpAmb e, opcionalmente, nProt base e dhEmi override.</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-text"><b>Gere</b> clicando em ⚡ Gerar XML. Baixe cada arquivo individualmente ou todos juntos em ZIP.</div></div>
+
+      <h3>Colunas CSV — Modo Receptor</h3>
+      <table>
+        <tr><th>Coluna</th><th>Descrição</th><th>Exemplo</th></tr>
+        <tr><td>nNF</td><td>Número da nota</td><td>77012</td></tr>
+        <tr><td>xPed</td><td>Número do pedido</td><td>7100008812</td></tr>
+        <tr><td>CNPJ_emit</td><td>CNPJ do emitente (14 dígitos)</td><td>02668458000149</td></tr>
+        <tr><td>xNome_emit</td><td>Razão Social do emitente</td><td>DOMICILI IND E COM</td></tr>
+        <tr><td>IE_emit</td><td>Inscrição Estadual</td><td>336695410116</td></tr>
+        <tr><td>CRT</td><td>Regime tributário (1=Simples, 3=Lucro)</td><td>1</td></tr>
+        <tr><td>xLgr_emit</td><td>Logradouro</td><td>RUA JOSE CAMPANELLA</td></tr>
+        <tr><td>nro_emit</td><td>Número</td><td>380</td></tr>
+        <tr><td>xBairro_emit</td><td>Bairro</td><td>MACEDO</td></tr>
+        <tr><td>xMun_emit</td><td>Município</td><td>GUARULHOS</td></tr>
+        <tr><td>UF_emit</td><td>Estado</td><td>SP</td></tr>
+        <tr><td>CEP_emit</td><td>CEP (8 dígitos)</td><td>07112100</td></tr>
+        <tr><td>qCom</td><td>Quantidade (4 decimais)</td><td>3.0000</td></tr>
+        <tr><td>uCom</td><td>Unidade</td><td>UN</td></tr>
+        <tr><td>vUnCom</td><td>Preço unitário</td><td>450.00</td></tr>
+        <tr><td>vProd</td><td>Total do item (qCom × vUnCom)</td><td>1350.00</td></tr>
+        <tr><td>vNF</td><td>Total da nota</td><td>1646.34</td></tr>
+        <tr><td>xProd</td><td>Descrição do produto</td><td>FPO-16.1 BR</td></tr>
+        <tr><td>NCM</td><td>Código NCM</td><td>73182200</td></tr>
+        <tr><td>CST_IPI</td><td>00=tributado, 70=isento</td><td>70</td></tr>
+        <tr><td>pIPI</td><td>Alíquota IPI %</td><td>0.00</td></tr>
+        <tr><td>pICMS_row</td><td>% ICMS (vazio = padrão global)</td><td>18.00</td></tr>
+      </table>
+      <p>No <b>Modo Emissor</b> as colunas do emitente são substituídas pelas do destinatário: <code>CNPJ_dest</code>, <code>xNome_dest</code>, <code>IE_dest</code>, <code>xLgr_dest</code>, <code>nro_dest</code>, <code>xBairro_dest</code>, <code>xMun_dest</code>, <code>UF_dest</code>, <code>CEP_dest</code>.</p>
+
+      <h3>Erros frequentes</h3>
+      <ul>
+        <li><b>CNPJ inválido</b>: deve ter exatamente 14 dígitos numéricos, sem pontos ou traços.</li>
+        <li><b>CEP inválido</b>: 8 dígitos, sem traço. Ex: <code>07112100</code></li>
+        <li><b>vNF inválido</b>: use ponto como separador decimal, não vírgula.</li>
+        <li><b>vUnCom ≠ vProd/qCom</b>: verifique que preço unitário × quantidade = total do item.</li>
+      </ul>
+    `
+  }
+};
+
+let lang='es', t=LANGS.es, mode='receptor';
+let templateXmlStr=null, fixedData={}, generatedFiles=[];
+
+const CSV_COLS_RECEPTOR='nNF,xPed,CNPJ_emit,xNome_emit,IE_emit,CRT,xLgr_emit,nro_emit,xBairro_emit,xMun_emit,UF_emit,CEP_emit,qCom,uCom,vUnCom,vProd,vNF,xProd,NCM,CST_IPI,pIPI,pICMS_row';
+const CSV_COLS_EMISOR='nNF,xPed,CNPJ_dest,xNome_dest,IE_dest,xLgr_dest,nro_dest,xBairro_dest,xMun_dest,UF_dest,CEP_dest,qCom,uCom,vUnCom,vProd,vNF,xProd,NCM,CST_IPI,pIPI,pICMS_row';
+const EX_RECEPTOR=()=>`${CSV_COLS_RECEPTOR}\n77012,7100008812,02668458000149,DOMICILI IND E COM DE ALIMENTOS,336695410116,1,RUA JOSE CAMPANELLA,380,MACEDO,GUARULHOS,SP,07112100,3.0000,UN,450.00,1350.00,1646.34,FPO-16.1 BR,73182200,70,0.00,18.00\n8661,7100008661,02668458000149,DOMICILI IND E COM DE ALIMENTOS,336695410116,1,RUA JOSE CAMPANELLA,380,MACEDO,GUARULHOS,SP,07112100,5.0000,UN,7.70,38.50,38.50,CAFE,73182200,70,0.00,18.00`;
+const EX_EMISOR=()=>`${CSV_COLS_EMISOR}\n8814,7100008814,61188488000117,GIVAUDAN DO BRASIL LTDA,102705856113,AV ENGENHEIRO BILLINGS,2185,JAGUARE,SAO PAULO,SP,05321010,4.0000,UN,239.00,956.00,1165.85,FPO-18.1 BR,73182200,70,0.00,18.00`;
+
+// GUIDE
+function openGuide(){
+  document.getElementById('guideTitle').textContent=t.guideTitle;
+  document.getElementById('guideBody').innerHTML=t.guide;
+  document.getElementById('guideOverlay').classList.add('open');
+}
+function closeGuide(){document.getElementById('guideOverlay').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeGuide();});
+
+// LANG
+function setLang(l){
+  lang=l; t=LANGS[l];
+  document.documentElement.lang=l;
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick').includes(`'${l}'`)));
+  applyI18n(); updateModeUI(); updateCsvHint();
+  if(templateXmlStr) renderFixedFields();
+}
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.dataset.i18n;if(typeof t[k]==='string')el.textContent=t[k];});
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{const k=el.dataset.i18nPlaceholder;if(t[k])el.placeholder=t[k];});
+  document.querySelectorAll('#tpAmb option').forEach(o=>{const k=o.dataset.i18n;if(t[k])o.textContent=t[k];});
+  document.getElementById('csvTextarea').placeholder=t.csvPlaceholder;
+  if(!templateXmlStr)document.getElementById('dropText').innerHTML=`<span>${t.dropHint}</span><br><span style="color:var(--muted);font-size:11px">${t.dropSub}</span>`;
+  const lb=document.getElementById('logBox');
+  if(lb.children.length===1&&lb.children[0].classList.contains('log-muted'))lb.children[0].textContent=t.logWaiting;
+}
+
+// MODE
+function setMode(m){
+  mode=m;
+  document.getElementById('btnModeReceptor').classList.toggle('active',m==='receptor');
+  document.getElementById('btnModeEmisor').classList.toggle('active',m==='emisor');
+  updateModeUI(); updateCsvHint();
+  if(templateXmlStr) renderFixedFields();
+  log(t.logModeChanged(m==='receptor'?t.modeReceptorBtn:t.modeEmisorBtn),'info');
+}
+function updateModeUI(){
+  const isR=mode==='receptor';
+  const ind=document.getElementById('modeIndicator');
+  ind.className=`mode-indicator ${isR?'mode-receptor':'mode-emisor'}`;
+  document.getElementById('modeIndicatorText').textContent=isR?t.modeIndReceptor:t.modeIndEmisor;
+  document.getElementById('fixedPanelTitle').textContent=isR?t.fixedTitleReceptor:t.fixedTitleEmisor;
+  document.getElementById('csvVarLabel').textContent=isR?t.csvVarReceptor:t.csvVarEmisor;
+  document.getElementById('btnModeReceptor').textContent=t.modeReceptorBtn;
+  document.getElementById('btnModeEmisor').textContent=t.modeEmisorBtn;
+}
+function updateCsvHint(){document.getElementById('csvColHint').textContent=mode==='receptor'?CSV_COLS_RECEPTOR:CSV_COLS_EMISOR;}
+
+// DRAG & DROP XML
+const dropZone=document.getElementById('dropZone');
+document.getElementById('xmlFileInput').addEventListener('change',e=>{if(e.target.files[0])readTemplate(e.target.files[0]);});
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag-over');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('drag-over');if(e.dataTransfer.files[0])readTemplate(e.dataTransfer.files[0]);});
+dropZone.addEventListener('click',()=>document.getElementById('xmlFileInput').click());
+
+function readTemplate(file){
+  const r=new FileReader();
+  r.onload=e=>{
+    templateXmlStr=e.target.result;
+    const dhM=templateXmlStr.match(/<dhEmi>([^<]+)<\/dhEmi>/);
+    const dhEmi=dhM?dhM[1]:'';
+    document.getElementById('dropText').innerHTML=`✅ ${file.name}<br><span style="color:var(--muted);font-size:11px">${(file.size/1024).toFixed(1)} KB</span>`;
+    dropZone.classList.add('loaded');
+    const nP=templateXmlStr.match(/<nProt>(\d+)<\/nProt>/);
+    if(nP)document.getElementById('nProtBase').value=nP[1];
+    extractFixedData(); renderFixedFields(); updateCsvHint();
+    log(t.logLoaded(file.name,(file.size/1024).toFixed(1),dhEmi),'ok');
+  };
+  r.readAsText(file,'UTF-8');
+}
+
+// EXTRACTION
+function gT(xml,tag){const m=xml.match(new RegExp(`<${tag}>([^<]*)<\/${tag}>`));return m?m[1].trim():'';}
+function gTB(xml,block,tag){const b=xml.match(new RegExp(`<${block}>[\\s\\S]*?<\/${block}>`));return b?gT(b[0],tag):'';}
+function extractFixedData(){
+  fixedData={
+    CNPJ_dest:gTB(templateXmlStr,'dest','CNPJ'),xNome_dest:gTB(templateXmlStr,'dest','xNome'),
+    IE_dest:gTB(templateXmlStr,'dest','IE'),email_dest:gTB(templateXmlStr,'dest','email'),
+    xLgr_dest:gTB(templateXmlStr,'dest','xLgr'),nro_dest:gTB(templateXmlStr,'dest','nro'),
+    xBairro_dest:gTB(templateXmlStr,'dest','xBairro'),xMun_dest:gTB(templateXmlStr,'dest','xMun'),
+    UF_dest:gTB(templateXmlStr,'dest','UF'),CEP_dest:gTB(templateXmlStr,'dest','CEP'),
+    cMun_dest:gTB(templateXmlStr,'dest','cMun'),indIEDest:gTB(templateXmlStr,'dest','indIEDest'),
+    CNPJ_emit:gTB(templateXmlStr,'emit','CNPJ'),xNome_emit:gTB(templateXmlStr,'emit','xNome'),
+    IE_emit:gTB(templateXmlStr,'emit','IE'),CRT:gTB(templateXmlStr,'emit','CRT'),
+    xLgr_emit:gTB(templateXmlStr,'enderEmit','xLgr'),nro_emit:gTB(templateXmlStr,'enderEmit','nro'),
+    xBairro_emit:gTB(templateXmlStr,'enderEmit','xBairro'),xMun_emit:gTB(templateXmlStr,'enderEmit','xMun'),
+    UF_emit:gTB(templateXmlStr,'enderEmit','UF'),CEP_emit:gTB(templateXmlStr,'enderEmit','CEP'),
+    cMun_emit:gTB(templateXmlStr,'enderEmit','cMun'),
+    cUF:gT(templateXmlStr,'cUF')||'35',dhEmi:gT(templateXmlStr,'dhEmi')||'',
+    mod:gT(templateXmlStr,'mod')||'55',serie:gT(templateXmlStr,'serie')||'000',
+    tpEmis:gT(templateXmlStr,'tpEmis')||'1',
+  };
+  log(t.logExtracted(fixedData.CNPJ_emit,fixedData.CNPJ_dest),'info');
+}
+function resetFixedFromTemplate(){if(!templateXmlStr)return;extractFixedData();renderFixedFields();log(t.logReset,'info');}
+
+function renderFixedFields(){
+  const c=document.getElementById('fixedFields');
+  const L=t.cardFixed, isR=mode==='receptor';
+  const fields=isR?[
+    {id:'f_CNPJ',label:L.CNPJ,key:'CNPJ_dest'},{id:'f_xNome',label:L.xNome,key:'xNome_dest'},
+    {id:'f_IE',label:L.IE,key:'IE_dest'},{id:'f_email',label:L.email,key:'email_dest'},
+    {id:'f_xLgr',label:L.xLgr,key:'xLgr_dest'},{id:'f_nro',label:L.nro,key:'nro_dest'},
+    {id:'f_xBairro',label:L.xBairro,key:'xBairro_dest'},{id:'f_xMun',label:L.xMun,key:'xMun_dest'},
+    {id:'f_UF',label:L.UF,key:'UF_dest'},{id:'f_CEP',label:L.CEP,key:'CEP_dest'},
+  ]:[
+    {id:'f_CNPJ',label:L.CNPJ,key:'CNPJ_emit'},{id:'f_xNome',label:L.xNome,key:'xNome_emit'},
+    {id:'f_IE',label:L.IE,key:'IE_emit'},{id:'f_CRT',label:L.CRT,key:'CRT'},
+    {id:'f_xLgr',label:L.xLgr,key:'xLgr_emit'},{id:'f_nro',label:L.nro,key:'nro_emit'},
+    {id:'f_xBairro',label:L.xBairro,key:'xBairro_emit'},{id:'f_xMun',label:L.xMun,key:'xMun_emit'},
+    {id:'f_UF',label:L.UF,key:'UF_emit'},{id:'f_CEP',label:L.CEP,key:'CEP_emit'},
+  ];
+  let html='';
+  for(let i=0;i<fields.length;i+=2){
+    const f1=fields[i],f2=fields[i+1];
+    html+=`<div class="field-row">
+      <div><label>${f1.label}</label><input id="${f1.id}" value="${eH(fixedData[f1.key]||'')}" data-orig-key="${f1.key}"></div>
+      ${f2?`<div><label>${f2.label}</label><input id="${f2.id}" value="${eH(fixedData[f2.key]||'')}" data-orig-key="${f2.key}"></div>`:'<div></div>'}
+    </div>`;
+  }
+  c.innerHTML=html;
+  c.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',function(){this.classList.toggle('modified',this.value!==(fixedData[this.dataset.origKey]||''));}));
+}
+function getFixedValues(){const o={};document.querySelectorAll('#fixedFields input').forEach(i=>o[i.dataset.origKey]=i.value.trim());return o;}
+
+// CSV
+function triggerCsvUpload(){document.getElementById('csvFileInput').click();}
+document.getElementById('csvFileInput').addEventListener('change',function(){
+  const f=this.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{document.getElementById('csvTextarea').value=e.target.result;document.getElementById('csvFilenameRow').textContent=`✅ ${f.name}`;log(t.logCsvLoaded(f.name,(f.size/1024).toFixed(1)),'ok');};
+  r.readAsText(f,'UTF-8');
+});
+function insertExample(){document.getElementById('csvTextarea').value=mode==='receptor'?EX_RECEPTOR():EX_EMISOR();}
+function copyCsvHeader(){navigator.clipboard.writeText(mode==='receptor'?CSV_COLS_RECEPTOR:CSV_COLS_EMISOR).then(()=>log(t.logHeaderCopied,'ok'));}
+function parseCsv(raw){
+  const lines=raw.trim().split('\n').map(l=>l.trim()).filter(Boolean);
+  if(lines.length<2)return[];
+  const h=lines[0].split(',').map(x=>x.trim());
+  return lines.slice(1).map(line=>{const v=line.split(',').map(x=>x.trim());const o={};h.forEach((k,i)=>o[k]=v[i]!==undefined?v[i]:'');return o;});
+}
+function previewCsv(){
+  const rows=parseCsv(document.getElementById('csvTextarea').value);
+  log(t.logPreview(rows.length),'info');
+  rows.forEach((r,i)=>{const id=mode==='receptor'?`${r.CNPJ_emit} (${r.xNome_emit})`:`${r.CNPJ_dest} (${r.xNome_dest})`;log(`  #${i+1} NF=${r.nNF} ${id} vNF=${r.vNF}`,'muted');});
+}
+
+// CHAVE
+function calcCDV(c43){const d=c43.split('').reverse();let t=0;for(let i=0;i<43;i++)t+=parseInt(d[i])*(2+(i%8));const r=t%11;return r<2?'0':String(11-r);}
+function gerarChave(cUF,aamm,cnpj,mod,serie,nNF,tpEmis){
+  const nP=String(nNF).padStart(9,'0'),sP=String(serie).padStart(3,'0');
+  const cNF=String(((parseInt(nNF)*97+31337)*7+parseInt(nNF))%100000000).padStart(8,'0');
+  const c43=`${cUF}${aamm}${cnpj}${mod}${sP}${nP}${tpEmis}${cNF}`;
+  if(c43.length!==43)throw new Error(t.errChave(c43.length));
+  return{chave44:c43+calcCDV(c43),cNF};
+}
+
+// XML GENERATION
+function rIB(xml,block,open,close,val){return xml.replace(new RegExp(`(<${block}[\\s\\S]*?)${eR(open)}[^<]*${eR(close)}`),`$1${open}${val}${close}`);}
+function eR(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+function eX(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function eH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function generateOneXml(tpl,row,fixed,nProtNow,tpAmb,defICMS){
+  const nNF=row.nNF.trim(),xPed=(row.xPed||'').trim();
+  const qCom=parseFloat(row.qCom),uCom=(row.uCom||'').trim();
+  const vUnCom=parseFloat(row.vUnCom),vProd=parseFloat(row.vProd),vNF=parseFloat(row.vNF);
+  const xProd=(row.xProd||'').trim(),ncm=(row.NCM||'').trim();
+  const cstIPI=(row.CST_IPI||'70').trim(),pIPI=parseFloat(row.pIPI)||0;
+  const pICMS=(row.pICMS_row&&row.pICMS_row!=='')?parseFloat(row.pICMS_row):defICMS;
+  if(!nNF)throw new Error(t.errNnf);
+  if(isNaN(vNF)||vNF<=0)throw new Error(t.errVnf(row.vNF));
+  const ipiTrib=cstIPI==='00';
+  const vIPI=ipiTrib?parseFloat((vProd*pIPI/100).toFixed(2)):0;
+  const vICMS=parseFloat((vNF*pICMS/100).toFixed(2));
+  const infCpl=`Trib aprox R$: ${vICMS.toFixed(2)} Estadual /PO${xPed} /`;
+  const nFat=nNF.padStart(6,'0');
+  const dhOver=document.getElementById('dhEmiOverride').value.trim();
+  const dhStr=dhOver||fixed.dhEmi||'';
+  const mD=dhStr.match(/(\d{4})-(\d{2})/);
+  const aamm=mD?(mD[1].slice(2)+mD[2]):'2604';
+  let cnpjChave;
+  if(mode==='receptor'){cnpjChave=(row.CNPJ_emit||'').replace(/\D/g,'');if(cnpjChave.length!==14)throw new Error(t.errCnpjEmit(cnpjChave));}
+  else{cnpjChave=(fixed.CNPJ_emit||'').replace(/\D/g,'');if(cnpjChave.length!==14)throw new Error(t.errCnpjEmitFixed(cnpjChave));}
+  const{chave44,cNF}=gerarChave(fixed.cUF||'35',aamm,cnpjChave,fixed.mod||'55',fixed.serie||'000',nNF,fixed.tpEmis||'1');
+  const cDV=chave44.slice(43);
+  let xml=tpl;
+  xml=xml.replace(/infNFe Id="NFe[^"]*"/,`infNFe Id="NFe${chave44}"`);
+  xml=xml.replace(/Reference URI="#NFe[^"]*"/,`Reference URI="#NFe${chave44}"`);
+  xml=xml.replace(/<nNF>[^<]*<\/nNF>/,`<nNF>${nNF}</nNF>`);
+  xml=xml.replace(/<cNF>[^<]*<\/cNF>/,`<cNF>${cNF}</cNF>`);
+  xml=xml.replace(/<cDV>[^<]*<\/cDV>/,`<cDV>${cDV}</cDV>`);
+  xml=xml.replace(/<tpAmb>[^<]*<\/tpAmb>/,`<tpAmb>${tpAmb}</tpAmb>`);
+  if(xPed)xml=xml.replace(/<xPed>[^<]*<\/xPed>/,`<xPed>${eX(xPed)}</xPed>`);
+  const sE=(cnpj,xN,ie,crt,xL,nro,xB,xM,uf,cep)=>{
+    xml=rIB(xml,'emit','<CNPJ>','</CNPJ>',cnpj);xml=rIB(xml,'emit','<xNome>','</xNome>',eX(xN));
+    xml=rIB(xml,'emit','<IE>','</IE>',ie);xml=rIB(xml,'emit','<CRT>','</CRT>',crt);
+    xml=rIB(xml,'enderEmit','<xLgr>','</xLgr>',eX(xL));xml=rIB(xml,'enderEmit','<nro>','</nro>',eX(nro));
+    xml=rIB(xml,'enderEmit','<xBairro>','</xBairro>',eX(xB));xml=rIB(xml,'enderEmit','<xMun>','</xMun>',eX(xM));
+    xml=rIB(xml,'enderEmit','<UF>','</UF>',uf);xml=rIB(xml,'enderEmit','<CEP>','</CEP>',cep.replace(/\D/g,''));
+  };
+  const sD=(cnpj,xN,ie,xL,nro,xB,xM,uf,cep)=>{
+    xml=rIB(xml,'dest','<CNPJ>','</CNPJ>',cnpj);xml=rIB(xml,'dest','<xNome>','</xNome>',eX(xN));
+    xml=rIB(xml,'dest','<IE>','</IE>',ie);
+    if(xL)xml=rIB(xml,'enderDest','<xLgr>','</xLgr>',eX(xL));
+    if(nro)xml=rIB(xml,'enderDest','<nro>','</nro>',eX(nro));
+    if(xB)xml=rIB(xml,'enderDest','<xBairro>','</xBairro>',eX(xB));
+    if(xM)xml=rIB(xml,'enderDest','<xMun>','</xMun>',eX(xM));
+    if(uf)xml=rIB(xml,'enderDest','<UF>','</UF>',uf);
+    if(cep)xml=rIB(xml,'enderDest','<CEP>','</CEP>',cep.replace(/\D/g,''));
+  };
+  if(mode==='receptor'){
+    sE((row.CNPJ_emit||'').replace(/\D/g,''),row.xNome_emit||'',row.IE_emit||'',row.CRT||'1',row.xLgr_emit||'',row.nro_emit||'',row.xBairro_emit||'',row.xMun_emit||'',row.UF_emit||'',row.CEP_emit||'');
+    sD((fixed.CNPJ_dest||'').replace(/\D/g,''),fixed.xNome_dest||'',fixed.IE_dest||'',fixed.xLgr_dest,fixed.nro_dest,fixed.xBairro_dest,fixed.xMun_dest,fixed.UF_dest,fixed.CEP_dest||'');
+  }else{
+    sE((fixed.CNPJ_emit||'').replace(/\D/g,''),fixed.xNome_emit||'',fixed.IE_emit||'',fixed.CRT||'1',fixed.xLgr_emit||'',fixed.nro_emit||'',fixed.xBairro_emit||'',fixed.xMun_emit||'',fixed.UF_emit||'',fixed.CEP_emit||'');
+    sD((row.CNPJ_dest||'').replace(/\D/g,''),row.xNome_dest||'',row.IE_dest||'',row.xLgr_dest||'',row.nro_dest||'',row.xBairro_dest||'',row.xMun_dest||'',row.UF_dest||'',row.CEP_dest||'');
+  }
+  xml=xml.replace(/<xProd>[^<]*<\/xProd>/,`<xProd>${eX(xProd)}</xProd>`);
+  xml=xml.replace(/<NCM>[^<]*<\/NCM>/,`<NCM>${ncm}</NCM>`);
+  xml=xml.replace(/<qCom>[^<]*<\/qCom>/,`<qCom>${qCom.toFixed(4)}</qCom>`);
+  xml=xml.replace(/<uCom>[^<]*<\/uCom>/,`<uCom>${uCom}</uCom>`);
+  xml=xml.replace(/<vUnCom>[^<]*<\/vUnCom>/,`<vUnCom>${vUnCom.toFixed(2)}</vUnCom>`);
+  xml=xml.replace(/<qTrib>[^<]*<\/qTrib>/,`<qTrib>${qCom.toFixed(4)}</qTrib>`);
+  xml=xml.replace(/<uTrib>[^<]*<\/uTrib>/,`<uTrib>${uCom}</uTrib>`);
+  xml=xml.replace(/<vUnTrib>[^<]*<\/vUnTrib>/,`<vUnTrib>${vUnCom.toFixed(2)}</vUnTrib>`);
+  xml=xml.replace(/<vProd>[^<]*<\/vProd>/,`<vProd>${vProd.toFixed(2)}</vProd>`);
+  xml=rIB(xml,'IPITrib','<CST>','</CST>',ipiTrib?'00':'70');
+  xml=rIB(xml,'IPITrib','<vBC>','</vBC>',ipiTrib?vProd.toFixed(2):'0.00');
+  xml=rIB(xml,'IPITrib','<pIPI>','</pIPI>',ipiTrib?pIPI.toFixed(2):'0.00');
+  xml=rIB(xml,'IPITrib','<vIPI>','</vIPI>',ipiTrib?vIPI.toFixed(2):'0.00');
+  xml=rIB(xml,'ICMS00','<vBC>','</vBC>',vNF.toFixed(2));
+  xml=rIB(xml,'ICMS00','<pICMS>','</pICMS>',pICMS.toFixed(2));
+  xml=rIB(xml,'ICMS00','<vICMS>','</vICMS>',vICMS.toFixed(2));
+  xml=rIB(xml,'ICMSTot','<vBC>','</vBC>',vNF.toFixed(2));
+  xml=rIB(xml,'ICMSTot','<vICMS>','</vICMS>',vICMS.toFixed(2));
+  xml=rIB(xml,'ICMSTot','<vProd>','</vProd>',vNF.toFixed(2));
+  xml=rIB(xml,'ICMSTot','<vIPI>','</vIPI>',vIPI.toFixed(2));
+  xml=rIB(xml,'ICMSTot','<vNF>','</vNF>',vNF.toFixed(2));
+  xml=xml.replace(/<vTotTrib>[^<]*<\/vTotTrib>/,`<vTotTrib>${vNF.toFixed(2)}</vTotTrib>`);
+  xml=xml.replace(/<nFat>[^<]*<\/nFat>/,`<nFat>${nFat}</nFat>`);
+  xml=xml.replace(/<vOrig>[^<]*<\/vOrig>/,`<vOrig>${vNF.toFixed(2)}</vOrig>`);
+  xml=xml.replace(/<vLiq>[^<]*<\/vLiq>/,`<vLiq>${vNF.toFixed(2)}</vLiq>`);
+  xml=xml.replace(/<vDup>[^<]*<\/vDup>/,`<vDup>${vNF.toFixed(2)}</vDup>`);
+  xml=xml.replace(/<vPag>[^<]*<\/vPag>/,`<vPag>${vNF.toFixed(2)}</vPag>`);
+  xml=xml.replace(/<infCpl>[^<]*<\/infCpl>/,`<infCpl>${eX(infCpl)}</infCpl>`);
+  xml=xml.replace(/infProt Id="Id[^"]*"/,`infProt Id="Id${nProtNow}"`);
+  xml=rIB(xml,'protNFe','<chNFe>','</chNFe>',chave44);
+  xml=rIB(xml,'protNFe','<nProt>','</nProt>',String(nProtNow));
+  xml=rIB(xml,'protNFe','<dhRecbto>','</dhRecbto>',fixed.dhEmi||'');
+  return{xml,chave44,vIPI,vICMS};
+}
+
+// BATCH
+function generateBatch(){
+  if(!templateXmlStr){log(t.errNoTemplate,'err');return;}
+  const csvRaw=document.getElementById('csvTextarea').value.trim();
+  if(!csvRaw){log(t.errNoCsv,'err');return;}
+  const rows=parseCsv(csvRaw);
+  if(!rows.length){log(t.errNoRows,'err');return;}
+  const fixed={...fixedData,...getFixedValues()};
+  const defICMS=parseFloat(document.getElementById('pICMS').value)||18;
+  const tpAmb=document.getElementById('tpAmb').value;
+  let nProt=parseInt(document.getElementById('nProtBase').value)||135260000000001;
+  generatedFiles=[];
+  let ok=0,err=0,totalVNF=0,totalICMS=0;
+  const grid=document.getElementById('resultGrid');
+  grid.innerHTML='';
+  log(t.logBatchStart(rows.length,tpAmb,defICMS),'info');
+  rows.forEach(row=>{
+    try{
+      const{xml,chave44,vIPI,vICMS}=generateOneXml(templateXmlStr,row,fixed,nProt,tpAmb,defICMS);
+      const vNF=parseFloat(row.vNF);
+      const cnpj=mode==='receptor'?(row.CNPJ_emit||''):(row.CNPJ_dest||'');
+      const nome=mode==='receptor'?(row.xNome_emit||''):(row.xNome_dest||'');
+      const fname=`NF_${row.nNF.trim()}_${cnpj.replace(/\D/g,'').slice(0,8)}.xml`;
+      generatedFiles.push({name:fname,content:xml});
+      ok++;totalVNF+=vNF;totalICMS+=vICMS;nProt++;
+      log(t.logNfOk(row.nNF,nome,vNF.toFixed(2),vICMS.toFixed(2),vIPI.toFixed(2)),'ok');
+      const card=document.createElement('div');
+      card.className='result-item';
+      card.innerHTML=`<div class="nf-num">NF-e ${row.nNF}</div><div class="nf-sub" style="color:var(--blue)">${cnpj}</div><div class="nf-sub">${nome}</div><div class="nf-info">${row.xProd}<br>vNF: <b style="color:var(--text)">R$ ${vNF.toFixed(2)}</b><br>ICMS ${row.pICMS_row||defICMS}%: R$ ${vICMS.toFixed(2)}<br>IPI CST${row.CST_IPI}: R$ ${vIPI.toFixed(2)}<br><span style="color:var(--muted)">...${chave44.slice(-12)}</span></div><div class="nf-status status-ok">${t.resultGenerated}</div><button class="btn-dl" onclick="downloadOne(${generatedFiles.length-1})">${t.btnDownload}</button>`;
+      grid.appendChild(card);
+    }catch(e){
+      log(t.logNfErr(row.nNF||'?',e.message),'err');err++;
+      const card=document.createElement('div');card.className='result-item';
+      card.innerHTML=`<div class="nf-num">NF-e ${row.nNF||'?'}</div><div class="nf-info" style="color:var(--red)">${e.message}</div><div class="nf-status status-err">${t.resultError}</div>`;
+      grid.appendChild(card);
+    }
+  });
+  log(t.logBatchEnd(ok,err,totalVNF.toFixed(2),totalICMS.toFixed(2)),ok>0?'ok':'err');
+  document.getElementById('statsBar').style.display='flex';
+  document.getElementById('resultArea').style.display='block';
+  document.getElementById('sTotal').textContent=rows.length;
+  document.getElementById('sOk').textContent=ok;
+  document.getElementById('sErr').textContent=err;
+  document.getElementById('sVnf').textContent=`R$ ${totalVNF.toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+  document.getElementById('sIcms').textContent=`R$ ${totalICMS.toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+  document.getElementById('btnZip').disabled=(generatedFiles.length===0);
+}
+function downloadOne(idx){const f=generatedFiles[idx];const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([f.content],{type:'application/xml;charset=utf-8'}));a.download=f.name;a.click();}
+async function downloadAll(){
+  if(!generatedFiles.length)return;
+  if(typeof JSZip==='undefined'){log(t.logZipFallback,'warn');generatedFiles.forEach((f,i)=>setTimeout(()=>downloadOne(i),i*300));return;}
+  const zip=new JSZip();generatedFiles.forEach(f=>zip.file(f.name,f.content));
+  const blob=await zip.generateAsync({type:'blob'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`NFe_Lote_${mode}_${new Date().toISOString().slice(0,10)}.zip`;a.click();
+  log(t.logZip,'ok');
+}
+function clearAll(){
+  generatedFiles=[];document.getElementById('resultGrid').innerHTML='';
+  document.getElementById('resultArea').style.display='none';document.getElementById('statsBar').style.display='none';
+  document.getElementById('btnZip').disabled=true;
+  document.getElementById('logBox').innerHTML=`<span class="log-muted">${t.logCleared}</span>`;
+}
+function log(msg,type='muted'){const box=document.getElementById('logBox');const el=document.createElement('div');el.className=`log-${type}`;el.textContent=`[${new Date().toTimeString().slice(0,8)}] ${msg}`;box.appendChild(el);box.scrollTop=box.scrollHeight;}
+
+// Init
+applyI18n();updateModeUI();updateCsvHint();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</body>
+</html>
